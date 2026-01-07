@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My AI Pet</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+</head>
+<body>
+  <div id="container">
+    <h1>My AI Pet</h1>
+    <select id="pet-select">
+      <option value="usako">Usako（白うさぎ）</option>
+      <option value="kuro">Kuro（黒うさぎ）</option>
+      <option value="taro">Taro（パピヨン子犬）</option>
+      <option value="marple">Marple（トイプードル）</option>
+      <option value="pochi">Pochi（柴犬子犬）</option>
+      <option value="tama">Tama（猫）</option>
+    </select>
+
+    <button id="custom-btn">呼び名・言葉設定</button>
+
+    <div id="pet-area">
+      <video id="pet-video" autoplay muted loop playsinline></video>
+      <img id="pet-img" src="" alt="ペット">
+    </div>
+
+    <div id="status">マイクとカメラを許可して遊んでね！</div>
+
+    <div id="controls">
+      <button id="mic-btn">🎤 音声認識</button>
+      <button id="camera-btn">📷 笑顔検知</button>
+    </div>
+
+    <video id="input-video" style="display:none;"></video>
+
+    <audio id="bark-sound"></audio>
+    <audio id="eating-sound" src="assets/sounds/eating.mp3" loop></audio>
+    <audio id="drinking-sound" src="assets/sounds/drinking.mp3" loop></audio>
+  </div>
+
+  <!-- カスタム設定モーダル -->
+  <div id="custom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:100;">
+    <div style="background:white; margin:20% auto; padding:20px; border-radius:16px; max-width:80%;">
+      <h2>呼び名・言葉設定</h2>
+      <label>表示名</label>
+      <input id="custom-name" type="text" placeholder="例: ジロ">
+      <label>喜びトリガー言葉（カンマ区切り）</label>
+      <input id="custom-keywords" type="text" placeholder="例: グッド,いい子ね,可愛いね">
+      <button id="save-custom">保存</button>
+      <button id="close-modal">閉じる</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
