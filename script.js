@@ -34,7 +34,7 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
-// ペットデータ（あなたのassets構成に一致）
+// ペットデータ（あなたのassets構成に完全一致）
 const PET_DATA = {
   usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.mp4', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
   kuro: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/kuro/n1.mp4', p2: 'assets/kuro/p2.mp4', p5: 'assets/kuro/p5.mp4', p6: 'assets/kuro/p6.png', p7: 'assets/kuro/p7.png', n3: 'assets/kuro/n3.mp4' },
@@ -119,6 +119,7 @@ function triggerP2() {
   const barkPath = PET_DATA[currentPet].bark;
   if (barkPath) {
     barkSound.src = barkPath;
+    barkSound.currentTime = 0;  // エコー防止
     barkSound.play().catch(() => {});
   }
 }
@@ -195,7 +196,10 @@ async function startCamera() {
     width: 320,
     height: 240
   });
-  camera.start();
+  await camera.start().catch((err) => {
+    status.textContent = 'カメラエラー: 許可を確認して再タップしてください';
+    console.error(err);
+  });
   cameraBtn.classList.add('active');
   status.textContent = '笑顔を見せてね！';
 }
@@ -237,8 +241,8 @@ function startMic() {
     }
   };
 
-  recognition.onerror = () => {
-    status.textContent = '音声認識エラー。再タップしてください';
+  recognition.onerror = (event) => {
+    status.textContent = 'マイクエラー: ' + event.error + '. 許可を確認して再タップ！';
   };
 
   recognition.start();
@@ -272,7 +276,7 @@ closeModal.addEventListener('click', () => {
   customModal.style.display = 'none';
 });
 
-// ボタン視覚フィードバック
+// ボタンイベント
 micBtn.addEventListener('click', startMic);
 cameraBtn.addEventListener('click', startCamera);
 
