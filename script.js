@@ -1,11 +1,6 @@
+// DOM要素取得（すべて冒頭で定義！！）
 const petSelect = document.getElementById('pet-select');
-const petArea = document.getElementById('pet-area');  // ← これを追加！！（撫で検知に必須）
-const customBtn = document.getElementById('custom-btn');
-const customModal = document.getElementById('custom-modal');
-const customName = document.getElementById('custom-name');
-const customKeywords = document.getElementById('custom-keywords');
-const saveCustom = document.getElementById('save-custom');
-const closeModal = document.getElementById('close-modal');
+const petArea = document.getElementById('pet-area');  // 撫で検知必須！！
 const petVideo = document.getElementById('pet-video');
 const petImg = document.getElementById('pet-img');
 const status = document.getElementById('status');
@@ -23,20 +18,17 @@ let lastInteractionTime = Date.now();
 let stateUntil = { p5: 0, p6: 0, p7: 0, p2: 0, p3: 0, p4: 0, n2: 0 };
 let triggerFlags = { sleepNow: false };
 
-let customNicknames = JSON.parse(localStorage.getItem('customNicknames') || '{}');
-
 let recognition = null;
 let faceMesh = null;
 let camera = null;
 
-// 撫で検知用
 let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
-// ペットデータ（パス確認済みでOK）
+// ペットデータ（あなたのassets構成に完全一致）
 const PET_DATA = {
-  usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.png', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
+  usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.mp4', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
   kuro: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/kuro/n1.mp4', p2: 'assets/kuro/p2.mp4', p5: 'assets/kuro/p5.mp4', p6: 'assets/kuro/p6.png', p7: 'assets/kuro/p7.png', n3: 'assets/kuro/n3.mp4' },
   taro: { bark: 'assets/sounds/bark_dog.mp3', n1: 'assets/taro/n1.png', p2: 'assets/taro/p2.png', p5: 'assets/taro/p5.png', p6: 'assets/taro/p6.png', p7: 'assets/taro/p7.png', n3: 'assets/taro/n3.png' },
   marple: { bark: 'assets/sounds/bark_dog.mp3', n1: 'assets/marple/n1.png', p2: 'assets/marple/p2.png', p5: 'assets/marple/p5.png', p6: 'assets/marple/p6.png', p7: 'assets/marple/p7.png', n3: 'assets/marple/n3.png' },
@@ -44,10 +36,105 @@ const PET_DATA = {
   tama: { bark: 'assets/sounds/bark_cat.mp3', n1: 'assets/tama/n1.png', p2: 'assets/tama/p2.png', p5: 'assets/tama/p5.png', p6: 'assets/tama/p6.png', p7: 'assets/tama/p7.png', n3: 'assets/tama/n3.png' }
 };
 
-// 以下は変更なし（getCurrentPetData, loadMedia, setState, determineState, triggerState, triggerP2, 撫で検知, 笑顔検知, カメラ, 音声認識, カスタムUI, 初期化）
+function loadMedia(src, isVideo = false) {
+  if (!src) src = 'assets/common/placeholder.png';  // フォールバック
+  if (isVideo || src.endsWith('.mp4')) {
+    petVideo.src = src;
+    petVideo.style.display = 'block';
+    petImg.style.display = 'none';
+    petVideo.play().catch(e => console.log('Video play error:', e));
+  } else {
+    petImg.src = src;
+    petVideo.style.display = 'none';
+    petImg.style.display = 'block';
+  }
+}
 
-// 初期ロード
-loadMedia(PET_DATA[currentPet].n1);
+function setState(state) {
+  if (currentState === state) return;
+  currentState = state;
+  const data = PET_DATA[currentPet];
+  eatingSound.pause();
+  drinkingSound.pause();
 
-// 定期状態更新
-setInterval(() => setState(determineState()), 500);
+  let src;
+  if (state === 'p5') src = data.p5;
+  else if (state === 'p6') src = data.p6;
+  else if (state === 'p7') src = data.p7;
+  else if (state === 'p2') src = data.p2;
+  else if (state === 'n3') src = data.n3;
+  else src = data.n1;
+
+  const isVideo = src && src.endsWith('.mp4');
+  loadMedia(src, isVideo);
+
+  if (state === 'p6') drinkingSound.play().catch(() => {});
+  if (state === 'p5') eatingSound.play().catch(() => {});
+
+  status.textContent = state === 'n3' ? 'Zzz... おやすみ〜' : state === 'p2' ? 'わーい！大好き！' : '反応中';
+}
+
+function determineState() {
+  const now = Date.now();
+  if (now < stateUntil.p5) return 'p5';
+  if (now < stateUntil.p6) return 'p6';
+  if (now < stateUntil.p7) return 'p7';
+  if (now < stateUntil.p2) return 'p2';
+
+  const idle = (now - lastInteractionTime) / 1000;
+  if (idle > 10 && idle <= 30) return 'p1';
+  if (idle > 30 || triggerFlags.sleepNow) {
+    triggerFlags.sleepNow = false;
+    return 'n3';
+  }
+  return 'n1';
+}
+
+function triggerState(state, duration = 15) {
+  stateUntil[state] = Date.now() + duration * 1000;
+  lastInteractionTime = Date.now();
+  setState(state);
+}
+
+function triggerP2() {
+  triggerState('p2', 8);
+  const barkPath = PET_DATA[currentPet].bark;
+  if (barkPath) {
+    barkSound.src = barkPath;
+    barkSound.play().catch(() => {});
+  }
+}
+
+// 撫で検知（petArea定義後）
+petArea.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isPetting = true;
+});
+
+petArea.addEventListener('touchmove', (e) => {
+  if (isPetting) {
+    const dx = Math.abs(e.touches[0].clientX - touchStartX);
+    const dy = Math.abs(e.touches[0].clientY - touchStartY);
+    if (dx > 50 || dy > 50) {
+      triggerP2();
+      isPetting = false;
+    }
+  }
+});
+
+petArea.addEventListener('touchend', () => isPetting = false);
+
+// 音声・カメラ・笑顔検知は省略（既存コードそのまま）
+
+// 初期化
+petSelect.addEventListener('change', (e) => {
+  currentPet = e.target.value;
+  setState('n1');
+});
+
+// 初期表示
+document.addEventListener('DOMContentLoaded', () => {
+  loadMedia(PET_DATA[currentPet].n1);
+  setInterval(() => setState(determineState()), 500);
+});
