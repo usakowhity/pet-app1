@@ -34,9 +34,6 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
-// 鳴き声連発防止フラグ
-let isBarking = false;
-
 // ペットデータ
 const PET_DATA = {
   usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.mp4', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
@@ -72,6 +69,7 @@ function loadMedia(src, isVideo = false) {
 }
 
 function setState(state) {
+  const previousState = currentState;  // 前の状態を記録
   if (currentState === state) return;
   currentState = state;
   const data = PET_DATA[currentPet];
@@ -91,6 +89,17 @@ function setState(state) {
 
   if (state === 'p6') drinkingSound.play().catch(() => {});
   if (state === 'p5') eatingSound.play().catch(() => {});
+
+  // p2への新規遷移時だけ鳴き声1回
+  if (state === 'p2' && previousState !== 'p2') {
+    const barkPath = PET_DATA[currentPet].bark;
+    if (barkPath) {
+      barkSound.pause();
+      barkSound.currentTime = 0;
+      barkSound.src = barkPath;
+      barkSound.play().catch(() => {});
+    }
+  }
 
   status.textContent = state === 'n3' ? 'Zzz... おやすみ〜' : state === 'p2' ? 'わーい！大好き！' : '反応中';
 }
@@ -117,27 +126,8 @@ function triggerState(state, duration = 15) {
   setState(state);
 }
 
-// 鳴き声エコー・連発完全防止
 function triggerP2() {
-  if (isBarking) return;  // 再生中はスキップ
   triggerState('p2', 8);
-  isBarking = true;
-  const barkPath = PET_DATA[currentPet].bark;
-  if (barkPath) {
-    barkSound.pause();
-    barkSound.currentTime = 0;
-    barkSound.src = barkPath;
-    barkSound.play().catch(() => {});
-    barkSound.onended = () => {
-      isBarking = false;
-    };
-    barkSound.onerror = () => {
-      isBarking = false;  // エラー時も解除
-    };
-  } else {
-    // 無音ペットの場合も短く待つ
-    setTimeout(() => { isBarking = false; }, 800);
-  }
 }
 
 // 撫で検知
