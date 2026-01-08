@@ -34,7 +34,7 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
-// 鳴き声エコー防止フラグ
+// 鳴き声連発防止フラグ
 let isBarking = false;
 
 // ペットデータ
@@ -117,9 +117,9 @@ function triggerState(state, duration = 15) {
   setState(state);
 }
 
-// エコー完全防止 + 連発防止
+// 鳴き声エコー・連発完全防止
 function triggerP2() {
-  if (isBarking) return;  // 鳴き声中はスキップ
+  if (isBarking) return;  // 再生中はスキップ
   triggerState('p2', 8);
   isBarking = true;
   const barkPath = PET_DATA[currentPet].bark;
@@ -131,9 +131,12 @@ function triggerP2() {
     barkSound.onended = () => {
       isBarking = false;
     };
+    barkSound.onerror = () => {
+      isBarking = false;  // エラー時も解除
+    };
   } else {
-    // 無音の場合も少し待つ
-    setTimeout(() => { isBarking = false; }, 1000);
+    // 無音ペットの場合も短く待つ
+    setTimeout(() => { isBarking = false; }, 800);
   }
 }
 
