@@ -29,7 +29,7 @@
       <img id="pet-img" src="" alt="ペット">
     </div>
 
-    <div id="status">マイクとカメラを許可して遊んでね！</div>
+    <div id="status">準備完了！ペットを選んで遊んでね</div>
 
     <div id="controls">
       <button id="mic-btn">🎤 音声認識</button>
@@ -43,16 +43,22 @@
     <audio id="drinking-sound" src="assets/sounds/drinking.mp3" loop></audio>
   </div>
 
-  <!-- カスタム設定モーダル -->
-  <div id="custom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:100;">
-    <div style="background:white; margin:20% auto; padding:20px; border-radius:16px; max-width:80%;">
+  <!-- カスタム設定モーダル（これが重要！！） -->
+  <div id="custom-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:100; display:flex; justify-content:center; align-items:center;">
+    <div style="background:white; padding:30px; border-radius:16px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
       <h2>呼び名・言葉設定</h2>
-      <label>表示名</label>
-      <input id="custom-name" type="text" placeholder="例: ジロ">
-      <label>喜びトリガー言葉（カンマ区切り）</label>
-      <input id="custom-keywords" type="text" placeholder="例: グッド,いい子ね,可愛いね">
-      <button id="save-custom">保存</button>
-      <button id="close-modal">閉じる</button>
+      <p>現在のペット: <strong id="modal-pet-name"></strong></p>
+      
+      <label for="custom-name" style="display:block; margin:20px 0 10px; font-weight:bold;">表示名（呼び名）</label>
+      <input id="custom-name" type="text" placeholder="例: ジロ" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+
+      <label for="custom-keywords" style="display:block; margin:20px 0 10px; font-weight:bold;">喜びトリガー言葉（カンマ区切り）</label>
+      <input id="custom-keywords" type="text" placeholder="例: グッド, いい子ね, 可愛いね, おりこう" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+
+      <div style="margin-top:30px;">
+        <button id="save-custom" style="padding:12px 24px; background:#4CAF50; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; margin:0 10px;">保存</button>
+        <button id="close-modal" style="padding:12px 24px; background:#ccc; color:#333; border:none; border-radius:8px; font-size:16px; cursor:pointer; margin:0 10px;">閉じる</button>
+      </div>
     </div>
   </div>
 
