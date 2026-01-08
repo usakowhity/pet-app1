@@ -34,7 +34,7 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
-// ペットデータ（あなたのassets構成に完全一致）
+// ペットデータ
 const PET_DATA = {
   usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.mp4', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
   kuro: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/kuro/n1.mp4', p2: 'assets/kuro/p2.mp4', p5: 'assets/kuro/p5.mp4', p6: 'assets/kuro/p6.png', p7: 'assets/kuro/p7.png', n3: 'assets/kuro/n3.mp4' },
@@ -114,12 +114,14 @@ function triggerState(state, duration = 15) {
   setState(state);
 }
 
+// エコー完全防止修正！！
 function triggerP2() {
   triggerState('p2', 8);
   const barkPath = PET_DATA[currentPet].bark;
   if (barkPath) {
-    barkSound.src = barkPath;
-    barkSound.currentTime = 0;  // エコー防止
+    barkSound.pause();           // ← 前の再生を強制停止
+    barkSound.currentTime = 0;   // ← 最初から再生
+    barkSound.src = barkPath;    // src再設定
     barkSound.play().catch(() => {});
   }
 }
