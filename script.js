@@ -34,6 +34,9 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isPetting = false;
 
+// 鳴き声エコー防止フラグ
+let isBarking = false;
+
 // ペットデータ
 const PET_DATA = {
   usako: { bark: 'assets/sounds/bark_rabbit.mp3', n1: 'assets/usako/n1.png', p2: 'assets/usako/p2.mp4', p5: 'assets/usako/p5.mp4', p6: 'assets/usako/p6.png', p7: 'assets/usako/p7.png', n3: 'assets/usako/n3.mp4' },
@@ -114,15 +117,23 @@ function triggerState(state, duration = 15) {
   setState(state);
 }
 
-// エコー完全防止修正！！
+// エコー完全防止 + 連発防止
 function triggerP2() {
+  if (isBarking) return;  // 鳴き声中はスキップ
   triggerState('p2', 8);
+  isBarking = true;
   const barkPath = PET_DATA[currentPet].bark;
   if (barkPath) {
-    barkSound.pause();           // ← 前の再生を強制停止
-    barkSound.currentTime = 0;   // ← 最初から再生
-    barkSound.src = barkPath;    // src再設定
+    barkSound.pause();
+    barkSound.currentTime = 0;
+    barkSound.src = barkPath;
     barkSound.play().catch(() => {});
+    barkSound.onended = () => {
+      isBarking = false;
+    };
+  } else {
+    // 無音の場合も少し待つ
+    setTimeout(() => { isBarking = false; }, 1000);
   }
 }
 
