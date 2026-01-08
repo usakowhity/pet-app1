@@ -1,7 +1,7 @@
-// DOM要素取得（すべて冒頭で定義）
+// DOM要素取得
 const petSelect = document.getElementById('pet-select');
-const petArea = document.getElementById('pet-area');  // 撫で検知必須
-const customBtn = document.getElementById('custom-btn');  // ← 追加！！
+const petArea = document.getElementById('pet-area');
+const customBtn = document.getElementById('custom-btn');
 const customModal = document.getElementById('custom-modal');
 const customName = document.getElementById('custom-name');
 const customKeywords = document.getElementById('custom-keywords');
@@ -143,12 +143,115 @@ petArea.addEventListener('touchmove', (e) => {
 
 petArea.addEventListener('touchend', () => isPetting = false);
 
-// カスタム設定UI強化
+// 笑顔検知感度UP
+function isSmileAndEyeOpen(landmarks) {
+  if (!landmarks) return false;
+  const leftMouth = landmarks[61];
+  const rightMouth = landmarks[291];
+  const mouthTop = landmarks[13];
+  const smileRatio = Math.hypot(rightMouth.x - leftMouth.x, rightMouth.y - leftMouth.y) /
+                     Math.hypot(mouthTop.y - landmarks[14].y, mouthTop.x - landmarks[14].x);
+
+  const leftEyeOpen = Math.hypot(landmarks[159].y - landmarks[145].y);
+  const rightEyeOpen = Math.hypot(landmarks[386].y - landmarks[374].y);
+  const eyeOpenRatio = (leftEyeOpen + rightEyeOpen) / 2;
+
+  return smileRatio > 2.0 && eyeOpenRatio > 0.008;
+}
+
+function onResults(results) {
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    if (isSmileAndEyeOpen(results.multiFaceLandmarks[0])) {
+      triggerP2();
+    }
+  }
+}
+
+// カメラ起動
+async function startCamera() {
+  if (camera) {
+    camera.stop();
+    if (faceMesh) faceMesh.close();
+    camera = null;
+    faceMesh = null;
+    cameraBtn.classList.remove('active');
+    status.textContent = 'カメラオフ';
+    return;
+  }
+
+  faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  faceMesh.onResults(onResults);
+
+  camera = new Camera(inputVideo, {
+    onFrame: async () => {
+      await faceMesh.send({image: inputVideo});
+    },
+    width: 320,
+    height: 240
+  });
+  camera.start();
+  cameraBtn.classList.add('active');
+  status.textContent = '笑顔を見せてね！';
+}
+
+// 音声認識強化
+function startMic() {
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+    micBtn.classList.remove('active');
+    status.textContent = 'マイクオフ';
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = (e) => {
+    const text = e.results[e.results.length - 1][0].transcript.toLowerCase();
+    lastInteractionTime = Date.now();
+
+    const petData = getCurrentPetData();
+    const allKeywords = ['かわいい', 'いい子', 'おりこう', '大好き', '好き', '可愛い', 'いいね', 'えらい', 'すごい', ...petData.keywords.map(k => k.toLowerCase()), petData.displayName.toLowerCase()];
+
+    if (allKeywords.some(k => text.includes(k))) {
+      triggerP2();
+    } else if (/ごはん|ご飯|おいしい|めし|飯/.test(text)) {
+      triggerState('p5', 15);
+    } else if (/水|お水|みず|飲/.test(text)) {
+      triggerState('p6', 15);
+    } else if (/トイレ|おしっこ|うんち|シー|しー/.test(text)) {
+      triggerState('p7', 15);
+    } else if (/ねんね|寝んね|ねむい|おやすみ|やすみ/.test(text)) {
+      triggerFlags.sleepNow = true;
+      setState('n3');
+    }
+  };
+
+  recognition.onerror = () => {
+    status.textContent = '音声認識エラー。再タップしてください';
+  };
+
+  recognition.start();
+  micBtn.classList.add('active');
+  status.textContent = '音声認識中！話しかけてね';
+}
+
+// カスタム設定UI
 customBtn.addEventListener('click', () => {
   const petData = getCurrentPetData();
   customName.value = petData.displayName || '';
   customKeywords.value = petData.keywords.join(', ');
-  customModal.style.display = 'flex';  // 中央寄せ
+  customModal.style.display = 'flex';
   status.textContent = '呼び名を設定中...';
 });
 
@@ -169,27 +272,18 @@ closeModal.addEventListener('click', () => {
   customModal.style.display = 'none';
 });
 
-// マイク・カメラボタン視覚フィードバック
-micBtn.addEventListener('click', () => {
-  micBtn.classList.toggle('active');
-  status.textContent = micBtn.classList.contains('active') ? '音声認識中！話しかけてね' : 'マイクオフ';
-  startMic();  // 関数呼び出し
-});
+// ボタン視覚フィードバック
+micBtn.addEventListener('click', startMic);
+cameraBtn.addEventListener('click', startCamera);
 
-cameraBtn.addEventListener('click', () => {
-  cameraBtn.classList.toggle('active');
-  status.textContent = cameraBtn.classList.contains('active') ? '笑顔を見せてね！' : 'カメラオフ';
-  startCamera();
-});
-
-// 笑顔検知・音声認識関数（変更なし、省略）
-
-// 初期化
+// ペット変更
 petSelect.addEventListener('change', (e) => {
   currentPet = e.target.value;
   setState('n1');
+  status.textContent = 'ペットを変更しました！';
 });
 
+// 初期化
 document.addEventListener('DOMContentLoaded', () => {
   loadMedia(PET_DATA[currentPet].n1);
   setInterval(() => setState(determineState()), 500);
